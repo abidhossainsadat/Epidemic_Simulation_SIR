@@ -1,893 +1,1193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Epidemic Spread Visualization</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.8em;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-            letter-spacing: 2px;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .control-group {
-            background: rgba(40, 40, 40, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .control-group:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #ffffff;
-            font-size: 0.9em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .control-group input[type="range"],
-        .control-group input[type="number"] {
-            width: 120px;
-            height: 6px; /* Adjusted height for number inputs too */
-            border-radius: 3px;
-            background: #333333;
-            outline: none;
-            margin-bottom: 5px;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            padding: 8px;
-            /* For number inputs specifically */
-            -moz-appearance: textfield; /* Firefox */
-        }
-        /* Hide arrows for number inputs in Webkit browsers */
-        .control-group input[type="number"]::-webkit-outer-spin-button,
-        .control-group input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        
-        .control-group input[type="range"]::-webkit-slider-thumb {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-        
-        .control-group input[type="range"]::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-        
-        .control-group span {
-            color: #4CAF50;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        
-        button {
-            padding: 15px 30px;
-            border: 2px solid transparent;
-            border-radius: 30px;
-            font-weight: bold;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        button:hover::before {
-            left: 100%;
-        }
-        
-        .start-btn {
-            background: linear-gradient(45deg, #00C851, #007E33);
-            color: white;
-            border-color: #00C851;
-        }
-        
-        .start-btn:hover {
-            background: linear-gradient(45deg, #00E676, #00C851);
-            box-shadow: 0 0 25px rgba(0, 200, 81, 0.4);
-        }
-        
-        .stop-btn {
-            background: linear-gradient(45deg, #FF5722, #D32F2F);
-            color: white;
-            border-color: #FF5722;
-        }
-        
-        .stop-btn:hover {
-            background: linear-gradient(45deg, #FF6F42, #FF5722);
-            box-shadow: 0 0 25px rgba(255, 87, 34, 0.4);
-        }
-        
-        .reset-btn {
-            background: linear-gradient(45deg, #2196F3, #1565C0);
-            color: white;
-            border-color: #2196F3;
-        }
-        
-        .reset-btn:hover {
-            background: linear-gradient(45deg, #42A5F5, #2196F3);
-            box-shadow: 0 0 25px rgba(33, 150, 243, 0.4);
-        }
-        
-        button:hover {
-            transform: translateY(-3px);
-        }
-        
-        button:active {
-            transform: translateY(-1px);
-        }
-        
-        .visualization-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 30px;
-        }
-        
-        .canvas-container {
-            background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-        }
-        
-        .canvas-container:hover {
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .canvas-container h3 {
-            color: #ffffff;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        #simulationCanvas {
-            width: 100%;
-            height: 400px;
-            border-radius: 15px;
-            background: #0a0a0a;
-            cursor: crosshair;
-            border: 2px solid #333333;
-            transition: border-color 0.3s ease;
-        }
-        
-        #simulationCanvas:hover {
-            border-color: #4CAF50;
-        }
-        
-        .chart-container {
-            background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 25px;
-            border-radius: 20px;
-            height: 440px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-        }
-        
-        .chart-container:hover {
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
-            transform: translateY(-2px);
-        }
-        
-        .chart-container h3 {
-            color: #ffffff;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 25px 0;
-            text-align: center;
-            gap: 15px;
-        }
-        
-        .stat-item {
-            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            min-width: 140px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stat-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #4CAF50, #FF5722, #2196F3);
-            opacity: 0.7;
-        }
-        
-        .stat-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
-        }
-        
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 8px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-        }
-        
-        .stat-item div:last-child {
-            font-size: 0.9em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.8;
-        }
-        
-        .susceptible { 
-            color: #4CAF50; 
-            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-        }
-        .infected { 
-            color: #FF5722; 
-            text-shadow: 0 0 10px rgba(255, 87, 34, 0.5);
-        }
-        .recovered { 
-            color: #2196F3; 
-            text-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
-        }
-        
-        .legend {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin: 25px 0;
-            padding: 20px;
-            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 600;
-            font-size: 1.1em;
-            transition: all 0.3s ease;
-        }
-        
-        .legend-item:hover {
-            transform: scale(1.05);
-        }
-        
-        .legend-color {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .legend-item:hover .legend-color {
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-            transform: scale(1.1);
-        }
-        
-        @media (max-width: 768px) {
-            .visualization-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Epidemic Command Center</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #03050A;
+      --bg-panel:     #070A18;
+      --bg-card:      #0C1024;
+      --border:       rgba(64,200,175,0.18);
+      --border-hi:    rgba(64,200,175,0.5);
+      --glow:         rgba(64,200,175,0.12);
+      --S: #22C55E; --E: #A855F7; --I: #EF4444;
+      --R: #3B82F6; --D: #6B7280; --V: #FBBF24;
+      --accent:  #40C8AF; --accent2: #F5A623;
+      --text:    #DDE4F0; --dim:  #64748B; --bright: #F1F5F9;
+      --font-ui:   'Exo 2', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content:'';
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(rgba(64,200,175,.025) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(64,200,175,.025) 1px,transparent 1px);
+      background-size: 40px 40px;
+      pointer-events:none; z-index:0;
+    }
+
+    .app { position:relative; z-index:1; max-width:1640px; margin:0 auto; padding:14px 16px; }
+
+    /* ── HEADER ───────────────────────────────────────────── */
+    .header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 22px;
+      background:var(--bg-panel);
+      border:1px solid var(--border);
+      border-radius:12px; margin-bottom:12px;
+      position:relative; overflow:hidden;
+    }
+    .header::after {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    }
+    .header-left { display:flex; align-items:center; gap:14px; }
+    .bz { font-size:36px; animation:bz-pulse 2.5s infinite;
+          filter:drop-shadow(0 0 10px var(--I)); }
+    @keyframes bz-pulse {
+      0%,100%{filter:drop-shadow(0 0 8px var(--I));}
+      50%{filter:drop-shadow(0 0 20px var(--I)) brightness(1.3);}
+    }
+    .header h1 {
+      font-size:1.45em; font-weight:900; letter-spacing:3px;
+      text-transform:uppercase; color:var(--bright); line-height:1.1;
+    }
+    .header h1 span { color:var(--accent); }
+    .header-sub {
+      font-family:var(--font-mono); font-size:.62em;
+      color:var(--dim); letter-spacing:2px; margin-top:3px;
+    }
+    .header-right { display:flex; align-items:center; gap:16px; }
+    .status-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:4px 10px; border-radius:5px;
+      font-family:var(--font-mono); font-size:.65em; font-weight:700;
+      letter-spacing:1px; text-transform:uppercase; border:1px solid;
+    }
+    .status-badge.paused  { background:rgba(245,166,35,.12); color:var(--accent2); border-color:rgba(245,166,35,.35); }
+    .status-badge.running { background:rgba(34,197,94,.12);  color:var(--S);      border-color:rgba(34,197,94,.35);  }
+    .status-badge.ended   { background:rgba(107,114,128,.12);color:var(--D);      border-color:rgba(107,114,128,.35);}
+    .model-selector {
+      display:flex; gap:3px; background:var(--bg-card);
+      padding:4px; border-radius:8px; border:1px solid var(--border);
+    }
+    .model-btn {
+      padding:5px 13px; border:none; border-radius:5px;
+      background:transparent; color:var(--dim);
+      font-family:var(--font-mono); font-size:.75em; font-weight:700;
+      cursor:pointer; transition:.2s; letter-spacing:1px;
+    }
+    .model-btn.active { background:var(--accent); color:#000; }
+    .model-lbl { font-family:var(--font-mono); font-size:.6em; color:var(--dim); text-align:right; margin-bottom:4px; letter-spacing:1px; }
+
+    /* ── STATS BAR ───────────────────────────────────────── */
+    .stats-bar {
+      display:grid;
+      grid-template-columns:repeat(6,1fr) repeat(5,minmax(90px,1fr));
+      gap:8px; margin-bottom:12px;
+    }
+    .stat-card {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:9px; padding:10px 13px; text-align:center;
+      position:relative; overflow:hidden; transition:.3s;
+    }
+    .stat-card:hover { border-color:var(--border-hi); }
+    .stat-lbl {
+      font-family:var(--font-mono); font-size:.6em;
+      text-transform:uppercase; letter-spacing:1.5px;
+      color:var(--dim); margin-bottom:3px;
+    }
+    .stat-val {
+      font-family:var(--font-mono); font-size:1.35em; font-weight:700;
+    }
+    .stat-card.cs .stat-val { color:var(--S); }
+    .stat-card.ce .stat-val { color:var(--E); }
+    .stat-card.ci .stat-val { color:var(--I); text-shadow:0 0 10px var(--I); }
+    .stat-card.cr .stat-val { color:var(--R); }
+    .stat-card.cd .stat-val { color:var(--D); }
+    .stat-card.cv .stat-val { color:var(--V); }
+    .stat-bar { position:absolute; bottom:0; left:0; height:3px; transition:width .6s; }
+    .metric-card {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:9px; padding:10px 13px; text-align:center;
+    }
+    .metric-lbl { font-family:var(--font-mono); font-size:.58em; text-transform:uppercase; letter-spacing:1.5px; color:var(--dim); margin-bottom:3px; }
+    .metric-val { font-family:var(--font-mono); font-size:1.2em; font-weight:700; color:var(--accent2); }
+    .metric-val.crit { color:var(--I); animation:blink-val .9s infinite; }
+    @keyframes blink-val { 50%{opacity:.55;} }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    .main-layout { display:grid; grid-template-columns:270px 1fr; gap:12px; }
+    .sidebar { display:flex; flex-direction:column; gap:12px; }
+    .panel {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:11px; overflow:hidden;
+    }
+    .panel-hdr {
+      padding:9px 15px; border-bottom:1px solid var(--border);
+      font-family:var(--font-mono); font-size:.7em; letter-spacing:2px;
+      text-transform:uppercase; color:var(--accent);
+      display:flex; align-items:center; gap:8px;
+    }
+    .panel-hdr::before {
+      content:''; width:6px; height:6px; border-radius:50%;
+      background:var(--accent); box-shadow:0 0 6px var(--accent);
+      flex-shrink:0;
+    }
+    .panel-body { padding:14px; }
+
+    /* ── SLIDERS ────────────────────────────────────────── */
+    .pg { margin-bottom:12px; }
+    .pg-lbl {
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:5px; font-size:.77em; color:var(--dim);
+    }
+    .pg-lbl span:last-child { font-family:var(--font-mono); color:var(--accent2); font-weight:600; }
+    input[type=range] {
+      width:100%; height:4px; -webkit-appearance:none; appearance:none;
+      background:rgba(255,255,255,.09); border-radius:2px; outline:none; cursor:pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; width:13px; height:13px; border-radius:50%;
+      background:var(--accent); cursor:pointer; box-shadow:0 0 7px var(--accent);
+      transition:transform .15s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.35); }
+    .pg.off { opacity:.3; pointer-events:none; }
+
+    /* ── TOOLS ──────────────────────────────────────────── */
+    .tool-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .tool-btn {
+      padding:9px 6px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:8px; color:var(--dim); font-family:var(--font-ui);
+      font-size:.75em; font-weight:600; cursor:pointer; transition:.2s;
+      text-align:center; display:flex; flex-direction:column;
+      align-items:center; gap:3px;
+    }
+    .tool-btn .ticon { font-size:1.3em; }
+    .tool-btn:hover { border-color:var(--border-hi); color:var(--bright); }
+    .tool-btn.active { border-color:var(--accent); background:rgba(64,200,175,.1); color:var(--accent); box-shadow:0 0 12px rgba(64,200,175,.2); }
+
+    .vax-row { display:flex; align-items:center; gap:6px; margin-top:10px; }
+    .vax-input {
+      width:52px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:5px; color:var(--V); font-family:var(--font-mono);
+      font-size:.82em; padding:4px 6px; outline:none; text-align:center;
+    }
+    .vax-input:focus { border-color:var(--V); }
+    .vax-btn {
+      flex:1; padding:5px; background:rgba(251,191,36,.12);
+      border:1px solid var(--V); border-radius:5px; color:var(--V);
+      font-family:var(--font-mono); font-size:.72em; font-weight:700;
+      cursor:pointer; transition:.2s; letter-spacing:1px;
+    }
+    .vax-btn:hover { background:rgba(251,191,36,.28); }
+
+    /* Social distancing toggle */
+    .sd-row {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:11px; padding:9px 11px;
+      background:var(--bg-card); border:1px solid var(--border); border-radius:7px;
+    }
+    .sd-lbl { font-size:.78em; }
+    .toggle-wrap { position:relative; display:inline-block; width:38px; height:19px; cursor:pointer; }
+    .toggle-wrap input { opacity:0; width:0; height:0; }
+    .toggle-track {
+      position:absolute; inset:0; background:rgba(255,255,255,.09);
+      border-radius:19px; transition:.3s; border:1px solid var(--border);
+    }
+    .toggle-thumb {
+      position:absolute; top:2px; left:2px; width:15px; height:15px;
+      background:var(--dim); border-radius:50%; transition:.3s;
+    }
+    .toggle-wrap input:checked ~ .toggle-track { background:rgba(64,200,175,.25); border-color:var(--accent); }
+    .toggle-wrap input:checked ~ .toggle-track + .toggle-thumb,
+    .toggle-wrap input:checked + .toggle-track + .toggle-thumb { left:21px; background:var(--accent); }
+    /* Fix: thumb must follow input */
+    .toggle-wrap input:checked + .toggle-track { background:rgba(64,200,175,.25); border-color:var(--accent); }
+
+    /* ICU */
+    .icu-wrap { margin-top:11px; }
+    .icu-lbl { display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:.68em; margin-bottom:4px; color:var(--dim); }
+    .icu-bg { height:7px; background:rgba(255,255,255,.07); border-radius:4px; overflow:hidden; }
+    .icu-fill { height:100%; border-radius:4px; transition:width .5s,background-color .3s; background:var(--R); }
+    .icu-fill.warn { background:var(--accent2); }
+    .icu-fill.crit { background:var(--I); }
+
+    /* ── CONTROLS ───────────────────────────────────────── */
+    .ctrl-row { display:flex; gap:7px; }
+    .ctrl-btn {
+      flex:1; padding:9px 6px; border-radius:7px;
+      font-family:var(--font-mono); font-size:.7em; font-weight:700;
+      cursor:pointer; transition:.2s; letter-spacing:1px; text-transform:uppercase; border:1px solid;
+    }
+    .ctrl-btn.start { background:rgba(34,197,94,.12); border-color:var(--S); color:var(--S); }
+    .ctrl-btn.start:hover { background:rgba(34,197,94,.28); box-shadow:0 0 14px rgba(34,197,94,.3); }
+    .ctrl-btn.stop  { background:rgba(239,68,68,.12);  border-color:var(--I); color:var(--I); }
+    .ctrl-btn.stop:hover  { background:rgba(239,68,68,.28);  box-shadow:0 0 14px rgba(239,68,68,.3); }
+    .ctrl-btn.reset { background:rgba(59,130,246,.12); border-color:var(--R); color:var(--R); }
+    .ctrl-btn.reset:hover { background:rgba(59,130,246,.28); box-shadow:0 0 14px rgba(59,130,246,.3); }
+    .ctrl-btn.xport { background:rgba(245,166,35,.12); border-color:var(--accent2); color:var(--accent2); }
+    .ctrl-btn.xport:hover { background:rgba(245,166,35,.28); box-shadow:0 0 14px rgba(245,166,35,.3); }
+
+    .time-row { text-align:center; margin-top:11px; font-family:var(--font-mono); font-size:.72em; color:var(--dim); }
+    .time-row span { color:var(--accent); }
+    .progress-bg { height:4px; background:rgba(255,255,255,.07); border-radius:2px; margin-top:5px; overflow:hidden; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:2px; transition:width .15s; }
+
+    /* ── VIZ AREA ───────────────────────────────────────── */
+    .viz-area { display:flex; flex-direction:column; gap:12px; }
+    .viz-top { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+    /* Canvas */
+    .canvas-panel {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:11px; overflow:hidden; position:relative;
+    }
+    .canvas-phdr {
+      padding:9px 15px; border-bottom:1px solid var(--border);
+      display:flex; justify-content:space-between; align-items:center;
+      font-family:var(--font-mono); font-size:.7em; letter-spacing:2px;
+      text-transform:uppercase; color:var(--accent);
+    }
+    .live-row { display:flex; align-items:center; gap:6px; font-size:.8em; color:var(--S); }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--S); box-shadow:0 0 5px var(--S); }
+    .live-dot.pulse { animation:ld 1s infinite; }
+    @keyframes ld { 50%{opacity:.3;} }
+    #simCanvas { width:100%; height:390px; display:block; cursor:crosshair; }
+    .canvas-hint {
+      position:absolute; bottom:9px; left:50%; transform:translateX(-50%);
+      font-family:var(--font-mono); font-size:.6em; color:rgba(255,255,255,.28);
+      letter-spacing:1px; white-space:nowrap; pointer-events:none;
+    }
+
+    /* Charts */
+    .charts-col { display:flex; flex-direction:column; gap:12px; }
+    .chart-panel {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:11px; overflow:hidden; flex:1;
+    }
+    .chart-phdr {
+      padding:9px 15px; border-bottom:1px solid var(--border);
+      display:flex; justify-content:space-between; align-items:center;
+      font-family:var(--font-mono); font-size:.7em; letter-spacing:2px;
+      text-transform:uppercase; color:var(--accent);
+    }
+    .chart-phdr-right { font-size:.78em; color:var(--dim); }
+    .chart-wrap { padding:10px; height:200px; }
+
+    /* Log */
+    .log-panel {
+      background:var(--bg-panel); border:1px solid var(--border);
+      border-radius:11px; overflow:hidden;
+    }
+    .log-body {
+      padding:8px 14px; max-height:72px; overflow-y:auto;
+      display:flex; flex-direction:column; gap:3px;
+    }
+    .log-entry { font-family:var(--font-mono); font-size:.67em; color:var(--dim); display:flex; gap:10px; }
+    .log-t { color:var(--accent2); min-width:55px; flex-shrink:0; }
+    .log-m { color:var(--text); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(64,200,175,.3); border-radius:2px; }
+
+    /* Speed mini row */
+    .speed-row { display:flex; align-items:center; gap:7px; }
+    .spd-btn {
+      width:26px; height:26px; background:var(--bg-card); border:1px solid var(--border);
+      border-radius:4px; color:var(--dim); font-size:.8em; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; transition:.2s;
+      font-family:var(--font-mono);
+    }
+    .spd-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    @media(max-width:1100px){
+      .main-layout { grid-template-columns:1fr; }
+      .viz-top { grid-template-columns:1fr; }
+      .stats-bar { grid-template-columns:repeat(4,1fr); }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🦠 Epidemic Spread Simulation 🦠</h1>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label>Infection Rate:</label>
-                <input type="range" id="infectionRate" min="0.01" max="0.1" step="0.01" value="0.03">
-                <span id="infectionValue">0.03</span>
-            </div>
-            
-            <div class="control-group">
-                <label>Recovery Rate:</label>
-                <input type="range" id="recoveryRate" min="0.01" max="0.1" step="0.01" value="0.02">
-                <span id="recoveryValue">0.02</span>
-            </div>
+<div class="app">
 
-            <div class="control-group">
-                <label>Simulation End Time:</label>
-                <input type="range" id="endTime" min="100" max="1000" value="200">
-                <span id="endTimeValue">200</span>
-            </div>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="bz">☣</div>
+      <div>
+        <h1>EPIDEMIC <span>COMMAND</span> CENTER</h1>
+        <div class="header-sub">AGENT-BASED SIMULATION ENGINE · v3.0</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="statusBadge" class="status-badge paused">⏸ PAUSED</div>
+      <div>
+        <div class="model-lbl">EPIDEMIC MODEL</div>
+        <div class="model-selector">
+          <button class="model-btn active" onclick="setModel('SIR')">SIR</button>
+          <button class="model-btn"        onclick="setModel('SEIR')">SEIR</button>
+          <button class="model-btn"        onclick="setModel('SIRS')">SIRS</button>
+        </div>
+      </div>
+    </div>
+  </header>
 
-            <div class="control-group">
-                <label>Initial Susceptible:</label>
-                <input type="number" id="initialSusceptible" min="0" value="700">
-            </div>
-            <div class="control-group">
-                <label>Initial Infected:</label>
-                <input type="number" id="initialInfected" min="0" value="1">
-            </div>
-            <div class="control-group">
-                <label>Initial Recovered:</label>
-                <input type="number" id="initialRecovered" min="0" value="0">
-            </div>
-            
-            <div class="control-group">
-                <button class="start-btn" onclick="startSimulation()">▶️ Start</button>
-                <button class="stop-btn" onclick="stopSimulation()">⏸️ Stop</button>
-                <button class="reset-btn" onclick="resetSimulation()">🔄 Reset</button>
-            </div>
-        </div>
-        
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number susceptible" id="susceptibleCount">700</div>
-                <div>Susceptible</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number infected" id="infectedCount">1</div>
-                <div>Infected</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number recovered" id="recoveredCount">0</div>
-                <div>Recovered</div>
-            </div>
-        </div>
-        
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color susceptible" style="background-color: #4CAF50;"></div>
-                <span>Susceptible</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color infected" style="background-color: #FF5722;"></div>
-                <span>Infected</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color recovered" style="background-color: #2196F3;"></div>
-                <span>Recovered</span>
-            </div>
-        </div>
-        
-        <div class="visualization-container">
-            <div class="canvas-container">
-                <h3>🗺️ Spatial Distribution</h3>
-                <canvas id="simulationCanvas" width="600" height="400"></canvas>
-                <p style="text-align: center; margin-top: 15px; opacity: 0.8; font-style: italic; color: #4CAF50;"> ->> Click anywhere to add infected individuals <<-</p>
-            </div>
-            
-            <div class="chart-container">
-                <h3>📊 Population Timeline</h3>
-                <canvas id="timeChart"></canvas>
-            </div>
-        </div>
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-card cs">
+      <div class="stat-lbl">Susceptible</div>
+      <div class="stat-val" id="stS">700</div>
+      <div class="stat-bar" style="background:var(--S)" id="bS"></div>
+    </div>
+    <div class="stat-card ce">
+      <div class="stat-lbl">Exposed</div>
+      <div class="stat-val" id="stE">0</div>
+      <div class="stat-bar" style="background:var(--E)" id="bE"></div>
+    </div>
+    <div class="stat-card ci">
+      <div class="stat-lbl">Infected</div>
+      <div class="stat-val" id="stI">1</div>
+      <div class="stat-bar" style="background:var(--I)" id="bI"></div>
+    </div>
+    <div class="stat-card cr">
+      <div class="stat-lbl">Recovered</div>
+      <div class="stat-val" id="stR">0</div>
+      <div class="stat-bar" style="background:var(--R)" id="bR"></div>
+    </div>
+    <div class="stat-card cd">
+      <div class="stat-lbl">Deceased</div>
+      <div class="stat-val" id="stD">0</div>
+      <div class="stat-bar" style="background:var(--D)" id="bD"></div>
+    </div>
+    <div class="stat-card cv">
+      <div class="stat-lbl">Vaccinated</div>
+      <div class="stat-val" id="stV">0</div>
+      <div class="stat-bar" style="background:var(--V)" id="bV"></div>
     </div>
 
-    <script>
-        // Global variables
-        let canvas, ctx, chart;
-        let individuals = [];
-        let isRunning = false;
-        let animationId;
-        let simulationTime = 0; // Tracks current simulation time
-        
-        // Simulation parameters (populationSize is now dynamic)
-        let infectionRate = 0.03;
-        let recoveryRate = 0.02;
-        let infectionRadius = 30;
-        let simulationEndTime = 200;
+    <div class="metric-card">
+      <div class="metric-lbl">R₀</div>
+      <div class="metric-val" id="mR0">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">Rₜ</div>
+      <div class="metric-val" id="mRt">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">HIT %</div>
+      <div class="metric-val" id="mHIT">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">CFR %</div>
+      <div class="metric-val" id="mCFR">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">Attack Rate</div>
+      <div class="metric-val" id="mAR">—</div>
+    </div>
+  </div>
 
-        // Initial counts from new input fields - defaults adjusted to match your image
-        let initialSusceptibleCount = 700;
-        let initialInfectedCount = 1;
-        let initialRecoveredCount = 0;
-        
-        // Individual states
-        const SUSCEPTIBLE = 0;
-        const INFECTED = 1;
-        const RECOVERED = 2;
-        
-        // Colors
-        const colors = {
-            [SUSCEPTIBLE]: '#4CAF50',
-            [INFECTED]: '#FF5722',
-            [RECOVERED]: '#2196F3'
-        };
-        
-        // Individual class
-        class Individual {
-            constructor(x, y, state = SUSCEPTIBLE) {
-                this.x = x;
-                this.y = y;
-                this.state = state;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.infectionTime = 0;
-                this.radius = 3;
-            }
-            
-            update() {
-                // Movement
-                this.x += this.vx;
-                this.y += this.vy;
-                
-                // Boundary checking
-                if (this.x <= this.radius || this.x >= canvas.width - this.radius) {
-                    this.vx *= -1;
-                }
-                if (this.y <= this.radius || this.y >= canvas.height - this.radius) {
-                    this.vy *= -1;
-                }
-                
-                // Keep within bounds
-                this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-                this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-                
-                // Update infection state
-                if (this.state === INFECTED) {
-                    this.infectionTime++;
-                    if (Math.random() < recoveryRate) {
-                        this.state = RECOVERED;
-                    }
-                }
-            }
-            
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = colors[this.state];
-                ctx.fill();
-                
-                // Add enhanced glow effect for infected
-                if (this.state === INFECTED) {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 4, 0, Math.PI * 2);
-                    ctx.strokeStyle = colors[INFECTED];
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                    
-                    // Pulsing effect
-                    const pulse = Math.sin(Date.now() * 0.01) * 0.5 + 0.5;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 8 * pulse, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 87, 34, ${0.3 * pulse})`;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-                
-                // Add subtle glow for all individuals
-                ctx.shadowColor = colors[this.state];
-                ctx.shadowBlur = 5;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = colors[this.state];
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            }
+  <!-- MAIN LAYOUT -->
+  <div class="main-layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Parameters -->
+      <div class="panel">
+        <div class="panel-hdr">Parameters</div>
+        <div class="panel-body">
+          <div class="pg">
+            <div class="pg-lbl"><span>β Infection Rate</span><span id="lBeta">0.030</span></div>
+            <input type="range" id="slBeta" min="0.005" max="0.15" step="0.005" value="0.03">
+          </div>
+          <div class="pg">
+            <div class="pg-lbl"><span>γ Recovery Rate</span><span id="lGamma">0.020</span></div>
+            <input type="range" id="slGamma" min="0.005" max="0.1" step="0.005" value="0.02">
+          </div>
+          <div class="pg off" id="pgSigma">
+            <div class="pg-lbl"><span>σ Exposure Rate (SEIR)</span><span id="lSigma">0.100</span></div>
+            <input type="range" id="slSigma" min="0.01" max="0.5" step="0.01" value="0.1">
+          </div>
+          <div class="pg off" id="pgWane">
+            <div class="pg-lbl"><span>ω Waning Immunity (SIRS)</span><span id="lWane">0.003</span></div>
+            <input type="range" id="slWane" min="0.001" max="0.05" step="0.001" value="0.003">
+          </div>
+          <div class="pg">
+            <div class="pg-lbl"><span>μ Mortality Rate</span><span id="lMort">0.005</span></div>
+            <input type="range" id="slMort" min="0" max="0.05" step="0.001" value="0.005">
+          </div>
+          <div class="pg">
+            <div class="pg-lbl"><span>☰ Infection Radius</span><span id="lRadius">30</span></div>
+            <input type="range" id="slRadius" min="10" max="70" step="2" value="30">
+          </div>
+          <div class="pg">
+            <div class="pg-lbl"><span>👥 Population</span><span id="lPop">700</span></div>
+            <input type="range" id="slPop" min="50" max="1200" step="50" value="700">
+          </div>
+          <div class="pg">
+            <div class="pg-lbl"><span>⏱ End Time</span><span id="lEnd">500</span></div>
+            <input type="range" id="slEnd" min="100" max="3000" step="100" value="500">
+          </div>
+          <div class="pg-lbl" style="margin-top:4px"><span>⚡ Speed</span><span id="lSpeed">1×</span></div>
+          <div class="speed-row">
+            <button class="spd-btn" onclick="chgSpeed(-1)">−</button>
+            <input type="range" id="slSpeed" min="1" max="15" step="1" value="1" style="flex:1">
+            <button class="spd-btn" onclick="chgSpeed(1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interventions -->
+      <div class="panel">
+        <div class="panel-hdr">Interventions</div>
+        <div class="panel-body">
+          <div class="tool-grid">
+            <button class="tool-btn active" id="toolInfect" onclick="setTool('infect')">
+              <span class="ticon">🦠</span><span>Infect</span>
+            </button>
+            <button class="tool-btn" id="toolVaccinate" onclick="setTool('vaccinate')">
+              <span class="ticon">💉</span><span>Vaccinate</span>
+            </button>
+            <button class="tool-btn" id="toolQuarantine" onclick="setTool('quarantine')">
+              <span class="ticon">🔲</span><span>Draw Zone</span>
+            </button>
+            <button class="tool-btn" onclick="clearZones()">
+              <span class="ticon">✕</span><span>Clear Zones</span>
+            </button>
+          </div>
+
+          <!-- Mass vaccination -->
+          <div class="vax-row">
+            <span style="font-size:.74em;color:var(--dim);white-space:nowrap">Mass Vax:</span>
+            <input type="number" class="vax-input" id="vaxPct" value="30" min="0" max="100">
+            <span style="font-size:.74em;color:var(--dim)">%</span>
+            <button class="vax-btn" onclick="massVax()">DEPLOY</button>
+          </div>
+
+          <!-- Social distancing -->
+          <div class="sd-row">
+            <span class="sd-lbl">📏 Social Distancing</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" id="chkSD" onchange="toggleSD()">
+              <span class="toggle-track"></span>
+              <span class="toggle-thumb"></span>
+            </label>
+          </div>
+
+          <!-- ICU capacity -->
+          <div class="icu-wrap">
+            <div class="pg" style="margin-bottom:6px">
+              <div class="pg-lbl"><span>🏥 ICU Capacity</span><span id="lICU">10%</span></div>
+              <input type="range" id="slICU" min="1" max="40" step="1" value="10">
+            </div>
+            <div class="icu-lbl"><span>Hospital Load</span><span id="icuPctLbl">0%</span></div>
+            <div class="icu-bg"><div class="icu-fill" id="icuFill" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel">
+        <div class="panel-body">
+          <div class="ctrl-row">
+            <button class="ctrl-btn start" onclick="startSim()">▶ START</button>
+            <button class="ctrl-btn stop"  onclick="stopSim()">⏸ STOP</button>
+          </div>
+          <div class="ctrl-row" style="margin-top:7px">
+            <button class="ctrl-btn reset" onclick="resetSim()">↺ RESET</button>
+            <button class="ctrl-btn xport" onclick="exportCSV()">↓ EXPORT</button>
+          </div>
+          <div class="time-row">T = <span id="tNow">0</span> / <span id="tEnd">500</span></div>
+          <div class="progress-bg">
+            <div class="progress-fill" id="progFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /sidebar -->
+
+    <!-- VIZ AREA -->
+    <div class="viz-area">
+      <div class="viz-top">
+
+        <!-- Canvas -->
+        <div class="canvas-panel">
+          <div class="canvas-phdr">
+            <span>Spatial Distribution</span>
+            <div class="live-row">
+              <div class="live-dot" id="liveDot"></div>
+              <span id="liveText">IDLE</span>
+            </div>
+          </div>
+          <canvas id="simCanvas"></canvas>
+          <div class="canvas-hint" id="canvasHint">
+            Click to INFECT · Drag with Draw Zone tool to quarantine
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-col">
+          <div class="chart-panel">
+            <div class="chart-phdr">
+              <span>Epidemiological Curves</span>
+              <span class="chart-phdr-right" id="peakLbl">Peak I: —</span>
+            </div>
+            <div class="chart-wrap"><canvas id="sirChart"></canvas></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-phdr">
+              <span>Reproductive Number Rₜ</span>
+              <span class="chart-phdr-right">R=1 threshold</span>
+            </div>
+            <div class="chart-wrap"><canvas id="rtChart"></canvas></div>
+          </div>
+        </div>
+
+      </div><!-- /viz-top -->
+
+      <!-- Intervention log -->
+      <div class="log-panel">
+        <div class="panel-hdr" style="padding:7px 14px">Intervention Log</div>
+        <div class="log-body" id="logBody">
+          <div class="log-entry"><span class="log-t">T=0</span><span class="log-m">Simulation initialized. Ready to start.</span></div>
+        </div>
+      </div>
+    </div><!-- /viz-area -->
+
+  </div><!-- /main-layout -->
+</div><!-- /app -->
+
+<script>
+// ================================================================
+// CONSTANTS
+// ================================================================
+const S=0, EXP=1, INF=2, REC=3, DEAD=4, VAX=5;
+const COLORS = {[S]:'#22C55E',[EXP]:'#A855F7',[INF]:'#EF4444',[REC]:'#3B82F6',[DEAD]:'#6B7280',[VAX]:'#FBBF24'};
+
+// ================================================================
+// STATE
+// ================================================================
+let canvas, ctx, sirChartObj, rtChartObj;
+let individuals=[], qZones=[];
+let running=false, animId=null;
+let simTime=0, simSpeed=1;
+let model='SIR', activeTool='infect', sdMode=false;
+
+let beta=0.03, gamma=0.02, sigma=0.1, wane=0.003;
+let mort=0.005, infRad=30, popSize=700, endTime=500, icuCap=10;
+
+let ts = {t:[],S:[],E:[],I:[],R:[],D:[],V:[],Rt:[]};
+let peakI=0;
+let drawingQ=false, qStart=null, qPrev=null;
+
+// ================================================================
+// INDIVIDUAL
+// ================================================================
+class Individual {
+  constructor(x, y, state=S) {
+    this.x=x; this.y=y; this.state=state;
+    const sp=1.1+Math.random()*0.6, ang=Math.random()*Math.PI*2;
+    this.vx=Math.cos(ang)*sp; this.vy=Math.sin(ang)*sp;
+    this.expTimer=0; this.infTimer=0;
+    this.r=3.2;
+    const rv=Math.random();
+    this.age = rv<0.6?0 : rv<0.9?1 : 2; // young/middle/elderly
+    this.ageBonus=[0,0.5,1.2][this.age];
+    this.phase=Math.random()*Math.PI*2;
+    this.inQ=false;
+  }
+
+  getMort() {
+    const af=[0.25,1,4.5][this.age];
+    const load=getICULoad();
+    const over = load>(icuCap/100) ? 1+(load/(icuCap/100)-1)*2.5 : 1;
+    return mort*af*over;
+  }
+
+  update() {
+    if(this.state===DEAD) return;
+    let spMult = sdMode ? 0.28 : 1;
+
+    this.inQ = qZones.some(z=>this.x>=z.x&&this.x<=z.x+z.w&&this.y>=z.y&&this.y<=z.y+z.h);
+    if(this.inQ) spMult*=0.18;
+
+    this.x+=this.vx*spMult; this.y+=this.vy*spMult;
+
+    const W=canvas.width, H=canvas.height, R=this.r+this.ageBonus;
+    if(this.x<=R||this.x>=W-R){this.vx*=-1; this.x=Math.max(R,Math.min(W-R,this.x));}
+    if(this.y<=R||this.y>=H-R){this.vy*=-1; this.y=Math.max(R,Math.min(H-R,this.y));}
+
+    // Soft quarantine bounce
+    if(this.inQ){
+      const z=qZones.find(z=>this.x>=z.x&&this.x<=z.x+z.w&&this.y>=z.y&&this.y<=z.y+z.h);
+      if(z){
+        if(this.x<z.x+R||this.x>z.x+z.w-R) this.vx*=-1;
+        if(this.y<z.y+R||this.y>z.y+z.h-R) this.vy*=-1;
+      }
+    }
+
+    if(this.state===EXP){
+      this.expTimer++;
+      if(Math.random()<sigma){this.state=INF; this.infTimer=0;}
+    }
+    if(this.state===INF){
+      this.infTimer++;
+      if(Math.random()<this.getMort()){this.state=DEAD; this.vx=0; this.vy=0;}
+      else if(Math.random()<gamma) this.state=REC;
+    }
+    if(model==='SIRS'&&this.state===REC){
+      if(Math.random()<wane) this.state=S;
+    }
+  }
+
+  draw(t) {
+    const R=this.r+this.ageBonus, col=COLORS[this.state];
+    if(this.state===DEAD){
+      ctx.globalAlpha=0.45;
+      ctx.strokeStyle=col; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(this.x-R,this.y-R); ctx.lineTo(this.x+R,this.y+R);
+      ctx.moveTo(this.x+R,this.y-R); ctx.lineTo(this.x-R,this.y+R); ctx.stroke();
+      ctx.globalAlpha=1; return;
+    }
+
+    // Infected glow pulse
+    if(this.state===INF){
+      const p=Math.sin(t*0.09+this.phase)*0.5+0.5;
+      ctx.beginPath(); ctx.arc(this.x,this.y,R+9*p,0,Math.PI*2);
+      ctx.fillStyle=`rgba(239,68,68,${0.08*p})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(this.x,this.y,R+4,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(239,68,68,.35)`; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // VAX shimmer
+    if(this.state===VAX){
+      const p=Math.sin(t*0.07+this.phase)*0.5+0.5;
+      ctx.beginPath(); ctx.arc(this.x,this.y,R+3*p,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(251,191,36,${0.4*p})`; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // Quarantine ring
+    if(this.inQ){
+      ctx.beginPath(); ctx.arc(this.x,this.y,R+3,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,200,50,.5)'; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // Main dot
+    ctx.shadowColor=col; ctx.shadowBlur = this.state===INF?8:3;
+    ctx.beginPath(); ctx.arc(this.x,this.y,R,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.shadowBlur=0;
+
+    // Elderly marker
+    if(this.age===2){
+      ctx.beginPath(); ctx.arc(this.x,this.y,1.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,0,0,.55)'; ctx.fill();
+    }
+  }
+}
+
+// ================================================================
+// SPATIAL GRID
+// ================================================================
+let grid={};
+const CELL=40;
+function buildGrid(){
+  grid={};
+  for(const p of individuals){
+    if(p.state===DEAD) continue;
+    const cx=Math.floor(p.x/CELL), cy=Math.floor(p.y/CELL);
+    const k=`${cx},${cy}`;
+    if(!grid[k]) grid[k]=[];
+    grid[k].push(p);
+  }
+}
+function nearby(x,y,r){
+  const cells=Math.ceil(r/CELL)+1, cx=Math.floor(x/CELL), cy=Math.floor(y/CELL), out=[];
+  for(let dx=-cells;dx<=cells;dx++)
+    for(let dy=-cells;dy<=cells;dy++){
+      const k=`${cx+dx},${cy+dy}`;
+      if(grid[k]) out.push(...grid[k]);
+    }
+  return out;
+}
+
+// ================================================================
+// POPULATION
+// ================================================================
+function createPop(){
+  individuals=[];
+  const W=canvas.width, H=canvas.height;
+  for(let i=0;i<popSize;i++){
+    individuals.push(new Individual(10+Math.random()*(W-20), 10+Math.random()*(H-20)));
+  }
+  // Seed infected
+  const seed=Math.max(1,Math.round(popSize*0.003));
+  for(let i=0;i<seed;i++) individuals[i].state=INF;
+}
+
+// ================================================================
+// METRICS
+// ================================================================
+function counts(){
+  let Sc=0,Ec=0,Ic=0,Rc=0,Dc=0,Vc=0;
+  for(const p of individuals){
+    switch(p.state){case S:Sc++;break;case EXP:Ec++;break;case INF:Ic++;break;case REC:Rc++;break;case DEAD:Dc++;break;case VAX:Vc++;break;}
+  }
+  return {S:Sc,E:Ec,I:Ic,R:Rc,D:Dc,V:Vc};
+}
+function calcR0(){
+  const N=individuals.filter(p=>p.state!==DEAD).length;
+  const area=canvas.width*canvas.height;
+  const er=sdMode?infRad*0.5:infRad;
+  return (beta*Math.PI*er*er*N)/(area*gamma);
+}
+function calcRt(Sc){
+  const N=individuals.filter(p=>p.state!==DEAD).length;
+  return N>0?calcR0()*(Sc/N):0;
+}
+function getICULoad(){
+  const {I}=counts();
+  return I/popSize;
+}
+
+// ================================================================
+// UPDATE
+// ================================================================
+function step(){
+  if(simTime>=endTime){stopSim(); addLog('Simulation completed.'); setStatus('ended'); return;}
+
+  for(let s=0;s<simSpeed;s++){
+    if(simTime>=endTime) break;
+    buildGrid();
+    const er=sdMode?infRad*0.5:infRad;
+
+    for(const p of individuals){
+      if(p.state!==INF) continue;
+      const nb=nearby(p.x,p.y,er);
+      for(const o of nb){
+        if(o===p||o.state!==S) continue;
+        const dx=p.x-o.x, dy=p.y-o.y;
+        if(dx*dx+dy*dy<er*er){
+          const qf=(p.inQ||o.inQ)?0.18:1;
+          if(Math.random()<beta*qf){
+            o.state=model==='SEIR'?EXP:INF;
+          }
         }
-        
-        // Initialize
-        function init() {
-            canvas = document.getElementById('simulationCanvas');
-            ctx = canvas.getContext('2d');
-            
-            // Set canvas size
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            // Initialize chart
-            initChart();
-            
-            // Setup event listeners
-            setupEventListeners();
+      }
+    }
+    for(const p of individuals) p.update();
+    simTime++;
 
-            // Set initial input values based on defaults (matching the image provided)
-            document.getElementById('initialSusceptible').value = initialSusceptibleCount;
-            document.getElementById('initialInfected').value = initialInfectedCount;
-            document.getElementById('initialRecovered').value = initialRecoveredCount;
+    if(simTime%2===0) recordData();
+  }
+}
 
-            // Initialize population after setting up event listeners for initial counts
-            resetSimulation(); 
-        }
-        
-        function setupEventListeners() {
-            // Infection Rate slider
-            document.getElementById('infectionRate').addEventListener('input', (e) => {
-                infectionRate = parseFloat(e.target.value);
-                document.getElementById('infectionValue').textContent = infectionRate;
-            });
-            
-            // Recovery Rate slider
-            document.getElementById('recoveryRate').addEventListener('input', (e) => {
-                recoveryRate = parseFloat(e.target.value);
-                document.getElementById('recoveryValue').textContent = recoveryRate;
-            });
+function recordData(){
+  const c=counts();
+  const rt=calcRt(c.S);
+  ts.t.push(simTime); ts.S.push(c.S); ts.E.push(c.E); ts.I.push(c.I);
+  ts.R.push(c.R); ts.D.push(c.D); ts.V.push(c.V); ts.Rt.push(parseFloat(rt.toFixed(3)));
+  if(c.I>peakI) peakI=c.I;
+  if(ts.t.length%3===0) updateCharts();
+  updateUI(c, rt);
+}
 
-            // End Time slider
-            document.getElementById('endTime').addEventListener('input', (e) => {
-                simulationEndTime = parseInt(e.target.value);
-                document.getElementById('endTimeValue').textContent = simulationEndTime;
-            });
+// ================================================================
+// UI UPDATE
+// ================================================================
+function updateUI(c, rt){
+  const N=c.S+c.E+c.I+c.R+c.D+c.V||1;
+  document.getElementById('stS').textContent=c.S;
+  document.getElementById('stE').textContent=c.E;
+  document.getElementById('stI').textContent=c.I;
+  document.getElementById('stR').textContent=c.R;
+  document.getElementById('stD').textContent=c.D;
+  document.getElementById('stV').textContent=c.V;
 
-            // New: Initial population count inputs
-            document.getElementById('initialSusceptible').addEventListener('input', (e) => {
-                initialSusceptibleCount = parseInt(e.target.value);
-                if (initialSusceptibleCount < 0) {
-                    initialSusceptibleCount = 0;
-                    e.target.value = 0;
-                }
-                if (!isRunning) resetSimulation(); // Reset to show changes immediately
-            });
-            document.getElementById('initialInfected').addEventListener('input', (e) => {
-                initialInfectedCount = parseInt(e.target.value);
-                if (initialInfectedCount < 0) {
-                    initialInfectedCount = 0;
-                    e.target.value = 0;
-                }
-                if (!isRunning) resetSimulation();
-            });
-            document.getElementById('initialRecovered').addEventListener('input', (e) => {
-                initialRecoveredCount = parseInt(e.target.value);
-                if (initialRecoveredCount < 0) {
-                    initialRecoveredCount = 0;
-                    e.target.value = 0;
-                }
-                if (!isRunning) resetSimulation();
-            });
-            
-            // Canvas click to add infected
-            canvas.addEventListener('click', (e) => {
-                const rect = canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                // Find nearby individuals and infect them
-                individuals.forEach(individual => {
-                    const dx = individual.x - x;
-                    const dy = individual.y - y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance < 20 && individual.state === SUSCEPTIBLE) {
-                        individual.state = INFECTED;
-                    }
-                });
-            });
-        }
+  const pct=v=>(v/N*100).toFixed(1)+'%';
+  document.getElementById('bS').style.width=pct(c.S);
+  document.getElementById('bE').style.width=pct(c.E);
+  document.getElementById('bI').style.width=pct(c.I);
+  document.getElementById('bR').style.width=pct(c.R);
+  document.getElementById('bD').style.width=pct(c.D);
+  document.getElementById('bV').style.width=pct(c.V);
 
-        // Removed adjustInitialCounts() as total population is now sum of inputs
+  const r0=calcR0();
+  const el_r0=document.getElementById('mR0');
+  el_r0.textContent=r0.toFixed(2);
+  el_r0.className='metric-val'+(r0>3?' crit':'');
 
-        function initChart() {
-            const chartCtx = document.getElementById('timeChart').getContext('2d');
-            chart = new Chart(chartCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Susceptible',
-                        data: [],
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        fill: true
-                    }, {
-                        label: 'Infected',
-                        data: [],
-                        borderColor: '#FF5722',
-                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
-                        fill: true
-                    }, {
-                        label: 'Recovered',
-                        data: [],
-                        borderColor: '#2196F3',
-                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'white'
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            title: {
-                                display: true,
-                                text: 'Time Steps',
-                                color: 'white'
-                            }
-                        },
-                        y: {
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            title: {
-                                display: true,
-                                text: 'Number of Individuals',
-                                color: 'white'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function createPopulation() {
-            individuals = [];
+  const el_rt=document.getElementById('mRt');
+  el_rt.textContent=rt.toFixed(2);
+  el_rt.className='metric-val'+(rt>1?' crit':'');
 
-            // The total population is now the sum of the initial counts
-            const totalPopulation = initialSusceptibleCount + initialInfectedCount + initialRecoveredCount;
+  document.getElementById('mHIT').textContent=r0>1?((1-1/r0)*100).toFixed(1)+'%':'N/A';
 
-            if (totalPopulation <= 0) {
-                console.warn("Total population is zero or negative. No individuals will be created.");
-                return; // Prevent creating an empty simulation
-            }
+  const total=c.R+c.D;
+  const cfr=total>0?(c.D/total*100).toFixed(1)+'%':'—';
+  document.getElementById('mCFR').textContent=cfr;
+  document.getElementById('mAR').textContent=((c.R+c.D)/N*100).toFixed(1)+'%';
 
-            // Create individuals based on initial counts
-            for (let count = 0; count < initialInfectedCount; count++) {
-                const x = Math.random() * (canvas.width - 20) + 10;
-                const y = Math.random() * (canvas.height - 20) + 10;
-                individuals.push(new Individual(x, y, INFECTED));
-            }
-            for (let count = 0; count < initialRecoveredCount; count++) {
-                const x = Math.random() * (canvas.width - 20) + 10;
-                const y = Math.random() * (canvas.height - 20) + 10;
-                individuals.push(new Individual(x, y, RECOVERED));
-            }
-            // Fill the rest with susceptible
-            for (let count = 0; count < initialSusceptibleCount; count++) {
-                const x = Math.random() * (canvas.width - 20) + 10;
-                const y = Math.random() * (canvas.height - 20) + 10;
-                individuals.push(new Individual(x, y, SUSCEPTIBLE));
-            }
+  document.getElementById('peakLbl').textContent=`Peak I: ${peakI}`;
+  document.getElementById('tNow').textContent=simTime;
+  document.getElementById('progFill').style.width=(simTime/endTime*100)+'%';
 
-            // Shuffle individuals to mix states visually
-            for (let k = individuals.length - 1; k > 0; k--) {
-                const j = Math.floor(Math.random() * (k + 1));
-                [individuals[k], individuals[j]] = [individuals[j], individuals[k]];
-            }
-        }
-        
-        function updateSimulation() {
-            if (simulationTime >= simulationEndTime) {
-                stopSimulation();
-                return;
-            }
+  // ICU
+  const load=getICULoad();
+  const icuFill=document.getElementById('icuFill');
+  const pct2=Math.min(100,load/(icuCap/100)*100).toFixed(1);
+  document.getElementById('icuPctLbl').textContent=(load*100).toFixed(1)+'%';
+  icuFill.style.width=pct2+'%';
+  icuFill.className='icu-fill'+(load>icuCap/100?' crit':load>icuCap/200?' warn':'');
+}
 
-            // Update all individuals
-            individuals.forEach(individual => individual.update());
-            
-            // Check for new infections
-            individuals.forEach(individual => {
-                if (individual.state === INFECTED) {
-                    individuals.forEach(other => {
-                        if (other.state === SUSCEPTIBLE) {
-                            const dx = individual.x - other.x;
-                            const dy = individual.y - other.y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            
-                            if (distance < infectionRadius && Math.random() < infectionRate) {
-                                other.state = INFECTED;
-                            }
-                        }
-                    });
-                }
-            });
-            
-            // Update statistics
-            updateStats();
-            updateChart();
-            simulationTime++; // Increment simulation time
-        }
-        
-        function updateStats() {
-            let susceptible = 0, infected = 0, recovered = 0;
-            
-            individuals.forEach(individual => {
-                switch (individual.state) {
-                    case SUSCEPTIBLE: susceptible++; break;
-                    case INFECTED: infected++; break;
-                    case RECOVERED: recovered++; break;
-                }
-            });
-            
-            document.getElementById('susceptibleCount').textContent = susceptible;
-            document.getElementById('infectedCount').textContent = infected;
-            document.getElementById('recoveredCount').textContent = recovered;
-        }
-        
-        function updateChart() {
-            let susceptible = 0, infected = 0, recovered = 0;
-            individuals.forEach(individual => {
-                switch (individual.state) {
-                    case SUSCEPTIBLE: susceptible++; break;
-                    case INFECTED: infected++; break;
-                    case RECOVERED: recovered++; break;
-                }
-            });
-            
-            chart.data.labels.push(simulationTime);
-            chart.data.datasets[0].data.push(susceptible);
-            chart.data.datasets[1].data.push(infected);
-            chart.data.datasets[2].data.push(recovered);
-            
-            chart.update('none');
-        }
-        
-        function draw() {
-            // Clear canvas with dark background
-            ctx.fillStyle = '#0a0a0a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Add subtle grid pattern
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 20) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, canvas.height);
-                ctx.stroke();
-            }
-            for (let i = 0; i < canvas.height; i += 20) {
-                ctx.beginPath();
-                ctx.moveTo(0, i);
-                ctx.lineTo(canvas.width, i);
-                ctx.lineTo(canvas.width, i);
-                ctx.stroke();
-            }
-            
-            // Draw individuals
-            individuals.forEach(individual => individual.draw());
-        }
-        
-        function animate() {
-            if (isRunning && simulationTime < simulationEndTime) {
-                updateSimulation();
-                draw();
-                animationId = requestAnimationFrame(animate);
-            } else if (simulationTime >= simulationEndTime) {
-                stopSimulation();
-            }
-        }
-        
-        function startSimulation() {
-            if (!isRunning) {
-                isRunning = true;
-                animate();
-            }
-        }
-        
-        function stopSimulation() {
-            isRunning = false;
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
-        }
-        
-        function resetSimulation() {
-            stopSimulation();
-            simulationTime = 0; // Reset simulation time
-            // Read current values from input fields for reset
-            initialSusceptibleCount = parseInt(document.getElementById('initialSusceptible').value);
-            initialInfectedCount = parseInt(document.getElementById('initialInfected').value);
-            initialRecoveredCount = parseInt(document.getElementById('initialRecovered').value);
-            
-            // Ensure inputs are non-negative here as well, in case user types a negative number directly
-            if (isNaN(initialSusceptibleCount) || initialSusceptibleCount < 0) initialSusceptibleCount = 0;
-            if (isNaN(initialInfectedCount) || initialInfectedCount < 0) initialInfectedCount = 0;
-            if (isNaN(initialRecoveredCount) || initialRecoveredCount < 0) initialRecoveredCount = 0;
+// ================================================================
+// CHARTS
+// ================================================================
+function initCharts(){
+  const shared={
+    responsive:true, maintainAspectRatio:false, animation:false,
+    plugins:{legend:{labels:{color:'#64748B',font:{family:'JetBrains Mono',size:10}}}},
+    scales:{
+      x:{ticks:{color:'#475569',font:{family:'JetBrains Mono',size:9},maxTicksLimit:7},grid:{color:'rgba(255,255,255,.04)'},title:{display:true,text:'Time Steps',color:'#475569',font:{family:'JetBrains Mono',size:9}}},
+      y:{ticks:{color:'#475569',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(255,255,255,.04)'}}
+    }
+  };
 
-            document.getElementById('initialSusceptible').value = initialSusceptibleCount;
-            document.getElementById('initialInfected').value = initialInfectedCount;
-            document.getElementById('initialRecovered').value = initialRecoveredCount;
+  sirChartObj=new Chart(document.getElementById('sirChart').getContext('2d'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'S',data:[],borderColor:'#22C55E',backgroundColor:'rgba(34,197,94,.06)',borderWidth:1.5,fill:true,pointRadius:0,tension:.3},
+      {label:'E',data:[],borderColor:'#A855F7',backgroundColor:'rgba(168,85,247,.06)',borderWidth:1.5,fill:true,pointRadius:0,tension:.3},
+      {label:'I',data:[],borderColor:'#EF4444',backgroundColor:'rgba(239,68,68,.12)',borderWidth:2,fill:true,pointRadius:0,tension:.3},
+      {label:'R',data:[],borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,.06)',borderWidth:1.5,fill:true,pointRadius:0,tension:.3},
+      {label:'D',data:[],borderColor:'#6B7280',backgroundColor:'rgba(107,114,128,.05)',borderWidth:1.5,fill:true,pointRadius:0,tension:.3},
+      {label:'V',data:[],borderColor:'#FBBF24',backgroundColor:'rgba(251,191,36,.06)',borderWidth:1.5,fill:true,pointRadius:0,tension:.3},
+    ]},
+    options:{...shared}
+  });
 
-            createPopulation(); // Create population based on the adjusted initial counts
-            
-            chart.data.labels = [];
-            chart.data.datasets.forEach(dataset => dataset.data = []);
-            chart.update();
-            updateStats(); // Update stats display based on new population
-            draw();
-        }
-        
-        // Initialize when page loads
-        window.addEventListener('load', init);
-        
-        // Handle resize
-        window.addEventListener('resize', () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            draw();
-        });
-    </script>
+  rtChartObj=new Chart(document.getElementById('rtChart').getContext('2d'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'Rₜ',data:[],borderColor:'#F59E0B',backgroundColor:'rgba(245,158,11,.1)',borderWidth:2,fill:true,pointRadius:0,tension:.3},
+      {label:'R=1',data:[],borderColor:'rgba(239,68,68,.5)',borderWidth:1.5,borderDash:[5,4],fill:false,pointRadius:0},
+    ]},
+    options:{...shared,scales:{...shared.scales,y:{...shared.scales.y,min:0,suggestedMax:5}}}
+  });
+}
+
+function updateCharts(){
+  const MAX=200;
+  const len=ts.t.length;
+  let lbl,dS,dE,dI,dR,dD,dV,dRt;
+
+  if(len>MAX){
+    const st=Math.floor(len/MAX);
+    const flt=(_,i)=>i%st===0;
+    lbl=ts.t.filter(flt); dS=ts.S.filter(flt); dE=ts.E.filter(flt);
+    dI=ts.I.filter(flt);  dR=ts.R.filter(flt); dD=ts.D.filter(flt);
+    dV=ts.V.filter(flt);  dRt=ts.Rt.filter(flt);
+  } else {
+    lbl=ts.t; dS=ts.S; dE=ts.E; dI=ts.I; dR=ts.R; dD=ts.D; dV=ts.V; dRt=ts.Rt;
+  }
+
+  sirChartObj.data.labels=lbl;
+  sirChartObj.data.datasets[0].data=dS;
+  sirChartObj.data.datasets[1].data=dE;
+  sirChartObj.data.datasets[2].data=dI;
+  sirChartObj.data.datasets[3].data=dR;
+  sirChartObj.data.datasets[4].data=dD;
+  sirChartObj.data.datasets[5].data=dV;
+  sirChartObj.update('none');
+
+  rtChartObj.data.labels=lbl;
+  rtChartObj.data.datasets[0].data=dRt;
+  rtChartObj.data.datasets[1].data=lbl.map(()=>1);
+  rtChartObj.update('none');
+}
+
+// ================================================================
+// DRAW CANVAS
+// ================================================================
+function drawCanvas(){
+  const W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#04060D'; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(64,200,175,.035)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Quarantine zones
+  for(const z of qZones){
+    ctx.fillStyle='rgba(255,200,50,.06)'; ctx.fillRect(z.x,z.y,z.w,z.h);
+    ctx.strokeStyle='rgba(255,200,50,.55)'; ctx.lineWidth=1.5;
+    ctx.setLineDash([6,3]); ctx.strokeRect(z.x,z.y,z.w,z.h); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,200,50,.75)';
+    ctx.font='9px JetBrains Mono'; ctx.fillText('⚠ QUARANTINE',z.x+4,z.y+13);
+  }
+
+  // Preview
+  if(drawingQ&&qPrev){
+    ctx.fillStyle='rgba(255,200,50,.04)'; ctx.fillRect(qPrev.x,qPrev.y,qPrev.w,qPrev.h);
+    ctx.strokeStyle='rgba(255,200,50,.85)'; ctx.lineWidth=1.5;
+    ctx.setLineDash([4,2]); ctx.strokeRect(qPrev.x,qPrev.y,qPrev.w,qPrev.h); ctx.setLineDash([]);
+  }
+
+  // Individuals
+  for(const p of individuals) p.draw(simTime);
+
+  // Scan line
+  const sy=(simTime*1.8)%H;
+  const sg=ctx.createLinearGradient(0,sy-18,0,sy+18);
+  sg.addColorStop(0,'transparent'); sg.addColorStop(.5,'rgba(64,200,175,.03)'); sg.addColorStop(1,'transparent');
+  ctx.fillStyle=sg; ctx.fillRect(0,sy-18,W,36);
+}
+
+// ================================================================
+// ANIMATION
+// ================================================================
+function loop(){
+  if(!running) return;
+  step(); drawCanvas();
+  animId=requestAnimationFrame(loop);
+}
+
+// ================================================================
+// CONTROLS
+// ================================================================
+function startSim(){
+  if(running) return;
+  running=true;
+  document.getElementById('liveDot').classList.add('pulse');
+  document.getElementById('liveText').textContent='LIVE';
+  setStatus('running');
+  addLog('Simulation started.');
+  loop();
+}
+function stopSim(){
+  running=false;
+  if(animId){cancelAnimationFrame(animId); animId=null;}
+  document.getElementById('liveDot').classList.remove('pulse');
+  document.getElementById('liveText').textContent='PAUSED';
+  setStatus('paused');
+  addLog(`Simulation paused at T=${simTime}.`);
+}
+function resetSim(){
+  stopSim();
+  simTime=0; peakI=0; qZones=[];
+  ts={t:[],S:[],E:[],I:[],R:[],D:[],V:[],Rt:[]};
+  createPop();
+  [sirChartObj,rtChartObj].forEach(c=>{c.data.labels=[];c.data.datasets.forEach(d=>d.data=[]);c.update();});
+  document.getElementById('tNow').textContent='0';
+  document.getElementById('progFill').style.width='0%';
+  document.getElementById('peakLbl').textContent='Peak I: —';
+  drawCanvas();
+  updateUI(counts(),0);
+  setStatus('paused');
+  addLog('Simulation reset.');
+}
+function setStatus(st){
+  const el=document.getElementById('statusBadge');
+  const map={running:['running','● RUNNING'],paused:['paused','⏸ PAUSED'],ended:['ended','■ ENDED']};
+  el.className='status-badge '+map[st][0]; el.textContent=map[st][1];
+}
+
+function setModel(m){
+  model=m;
+  document.querySelectorAll('.model-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.model-btn[onclick="setModel('${m}')"]`).classList.add('active');
+  document.getElementById('pgSigma').className='pg'+(m==='SEIR'?'':' off');
+  document.getElementById('pgWane').className='pg'+(m==='SIRS'?'':' off');
+  addLog(`Model → ${m}`);
+  if(!running) resetSim();
+}
+
+function setTool(t){
+  activeTool=t;
+  ['Infect','Vaccinate','Quarantine'].forEach(n=>{
+    const el=document.getElementById('tool'+n);
+    if(el) el.classList.toggle('active', n.toLowerCase()===t);
+  });
+  const hints={infect:'Click near individuals to INFECT them',vaccinate:'Click near individuals to VACCINATE them',quarantine:'Drag on canvas to draw a QUARANTINE zone — right-click zone to remove'};
+  document.getElementById('canvasHint').textContent=hints[t]||'';
+  canvas.style.cursor=t==='quarantine'?'crosshair':'pointer';
+}
+
+function clearZones(){
+  qZones=[]; addLog('All quarantine zones cleared.');
+  if(!running) drawCanvas();
+}
+
+function toggleSD(){
+  sdMode=document.getElementById('chkSD').checked;
+  addLog(sdMode?'Social distancing ON (movement ↓70%, radius ↓50%)':'Social distancing OFF');
+}
+
+function massVax(){
+  const pct=parseFloat(document.getElementById('vaxPct').value)/100;
+  const pool=individuals.filter(p=>p.state===S).sort(()=>Math.random()-.5);
+  const n=Math.floor(pool.length*pct);
+  for(let i=0;i<n;i++) pool[i].state=VAX;
+  addLog(`Mass vaccination: ${n} individuals vaccinated (${(pct*100).toFixed(0)}%)`);
+  if(!running) drawCanvas();
+}
+
+function chgSpeed(d){
+  simSpeed=Math.max(1,Math.min(15,simSpeed+d));
+  document.getElementById('slSpeed').value=simSpeed;
+  document.getElementById('lSpeed').textContent=simSpeed+'×';
+}
+
+function exportCSV(){
+  const rows=['Time,Susceptible,Exposed,Infected,Recovered,Dead,Vaccinated,Rt'];
+  for(let i=0;i<ts.t.length;i++)
+    rows.push([ts.t[i],ts.S[i],ts.E[i],ts.I[i],ts.R[i],ts.D[i],ts.V[i],ts.Rt[i]].join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download=`epidemic_${model}_T${simTime}.csv`; a.click();
+  addLog('Data exported as CSV.');
+}
+
+// ================================================================
+// LOG
+// ================================================================
+function addLog(msg){
+  const lb=document.getElementById('logBody');
+  const e=document.createElement('div'); e.className='log-entry';
+  e.innerHTML=`<span class="log-t">T=${simTime}</span><span class="log-m">${msg}</span>`;
+  lb.appendChild(e); lb.scrollTop=lb.scrollHeight;
+  while(lb.children.length>25) lb.removeChild(lb.firstChild);
+}
+
+// ================================================================
+// CANVAS EVENTS
+// ================================================================
+function setupCanvasEvents(){
+  function getXY(e){
+    const rect=canvas.getBoundingClientRect();
+    const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
+    return {x:(e.clientX-rect.left)*sx, y:(e.clientY-rect.top)*sy};
+  }
+
+  canvas.addEventListener('mousedown',e=>{
+    const {x,y}=getXY(e);
+    if(activeTool==='quarantine'){
+      drawingQ=true; qStart={x,y}; qPrev={x,y,w:0,h:0};
+    } else {
+      applyTool(x,y);
+    }
+  });
+
+  canvas.addEventListener('mousemove',e=>{
+    if(!drawingQ) return;
+    const {x,y}=getXY(e);
+    if(qStart){
+      qPrev={x:Math.min(x,qStart.x),y:Math.min(y,qStart.y),w:Math.abs(x-qStart.x),h:Math.abs(y-qStart.y)};
+      if(!running) drawCanvas();
+    }
+  });
+
+  canvas.addEventListener('mouseup',e=>{
+    if(drawingQ&&qPrev){
+      if(qPrev.w>12&&qPrev.h>12){
+        qZones.push({...qPrev});
+        addLog(`Quarantine zone ${qPrev.w.toFixed(0)}×${qPrev.h.toFixed(0)}px created`);
+      }
+      drawingQ=false; qPrev=null;
+      if(!running) drawCanvas();
+    }
+  });
+
+  canvas.addEventListener('contextmenu',e=>{
+    e.preventDefault();
+    const {x,y}=getXY(e);
+    const i=qZones.findIndex(z=>x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h);
+    if(i>=0){qZones.splice(i,1); addLog('Quarantine zone removed.'); if(!running) drawCanvas();}
+  });
+}
+
+function applyTool(x,y){
+  const CR=22; let n=0;
+  for(const p of individuals){
+    const dx=p.x-x, dy=p.y-y;
+    if(dx*dx+dy*dy<CR*CR){
+      if(activeTool==='infect'&&p.state===S){
+        p.state=model==='SEIR'?EXP:INF; n++;
+      } else if(activeTool==='vaccinate'&&p.state===S){
+        p.state=VAX; n++;
+      }
+    }
+  }
+  if(n>0) addLog(`${activeTool==='infect'?'Infected':'Vaccinated'} ${n} individual(s)`);
+  if(!running) drawCanvas();
+}
+
+// ================================================================
+// SLIDERS
+// ================================================================
+function setupSliders(){
+  const map=[
+    ['slBeta',  'lBeta',  v=>beta=+v,   v=>(+v).toFixed(3)],
+    ['slGamma', 'lGamma', v=>gamma=+v,  v=>(+v).toFixed(3)],
+    ['slSigma', 'lSigma', v=>sigma=+v,  v=>(+v).toFixed(3)],
+    ['slWane',  'lWane',  v=>wane=+v,   v=>(+v).toFixed(3)],
+    ['slMort',  'lMort',  v=>mort=+v,   v=>(+v).toFixed(3)],
+    ['slRadius','lRadius',v=>infRad=+v, v=>Math.round(v)],
+    ['slPop',   'lPop',   v=>popSize=+v,v=>Math.round(v)],
+    ['slEnd',   'lEnd',   v=>{endTime=+v;document.getElementById('tEnd').textContent=v;},v=>Math.round(v)],
+    ['slSpeed', 'lSpeed', v=>simSpeed=+v,v=>Math.round(v)+'×'],
+    ['slICU',   'lICU',   v=>icuCap=+v, v=>Math.round(v)+'%'],
+  ];
+  for(const [id,lbl,set,fmt] of map){
+    const el=document.getElementById(id); if(!el) continue;
+    el.addEventListener('input',e=>{set(e.target.value); document.getElementById(lbl).textContent=fmt(e.target.value);});
+  }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+function init(){
+  canvas=document.getElementById('simCanvas');
+  ctx=canvas.getContext('2d');
+
+  function resize(){
+    canvas.width=canvas.parentElement.clientWidth||600;
+    canvas.height=390;
+  }
+  resize();
+  window.addEventListener('resize',()=>{resize(); drawCanvas();});
+
+  initCharts();
+  setupSliders();
+  setupCanvasEvents();
+  createPop();
+  drawCanvas();
+  updateUI(counts(),0);
+  document.getElementById('tEnd').textContent=endTime;
+}
+
+window.addEventListener('load',init);
+</script>
 </body>
 </html>
